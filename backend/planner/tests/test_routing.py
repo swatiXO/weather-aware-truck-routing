@@ -13,7 +13,7 @@ ORIGIN, DEST = Place("O", 30, -100), Place("D", 34, -100)
 
 def line(lon, duration_h):
     coords = [(30 + 4 * i / 100, lon) for i in range(101)]
-    return RouteData(coords, 276, duration_h * 3600, [Step(0, 100, duration_h * 3600)])
+    return RouteData(coords, duration_h * 3600, [Step(0, 100, duration_h * 3600)])
 
 
 @pytest.fixture(autouse=True)

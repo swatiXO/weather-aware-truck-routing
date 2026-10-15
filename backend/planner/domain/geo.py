@@ -3,7 +3,6 @@ import math
 from bisect import bisect_right
 
 EARTH_RADIUS_MI = 3958.8
-METERS_PER_MILE = 1609.344
 
 
 def haversine_mi(a, b) -> float:

@@ -17,9 +17,9 @@ def line(lon, n=101, lat_span=4.0):
 
 
 ROUTES = [
-    RouteData(line(-100.0), 276, 4.0 * 3600, [Step(0, 100, 4.0 * 3600)]),  # fast, windy
-    RouteData(line(-101.0), 276, 4.5 * 3600, [Step(0, 100, 4.5 * 3600)]),  # calm
-    RouteData(line(-102.0), 276, 5.0 * 3600, [Step(0, 100, 5.0 * 3600)]),  # calm, slowest
+    RouteData(line(-100.0), 4.0 * 3600, [Step(0, 100, 4.0 * 3600)]),  # fast, windy
+    RouteData(line(-101.0), 4.5 * 3600, [Step(0, 100, 4.5 * 3600)]),  # calm
+    RouteData(line(-102.0), 5.0 * 3600, [Step(0, 100, 5.0 * 3600)]),  # calm, slowest
 ]
 
 

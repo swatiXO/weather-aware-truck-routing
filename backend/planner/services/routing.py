@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from django.conf import settings
 from django.core.cache import cache
 
-from ..domain.geo import METERS_PER_MILE, bearing_deg, cumulative_miles, destination, haversine_mi, point_at
+from ..domain.geo import bearing_deg, cumulative_miles, destination, haversine_mi, point_at
 from ..domain.sampling import Step, cumulative_seconds
 from ..domain.spur import find_spur, splice
 from .http import UpstreamError, cache_key, request_json
@@ -36,7 +36,6 @@ NO_ROUTE_MESSAGE = "No truck route found between these places. They may not be c
 @dataclass
 class RouteData:
     coords: list[tuple[float, float]]  # (lat, lon)
-    distance_mi: float
     duration_s: float
     steps: list[Step]
     waypoints: list[int] = field(default_factory=list)  # coordinate index of each requested point
@@ -86,14 +85,7 @@ def _parse_feature(feature) -> RouteData:
         for seg in props.get("segments", [])
         for s in seg.get("steps", [])
     ]
-    summary = props.get("summary", {})
-    return RouteData(
-        coords=coords,
-        distance_mi=summary.get("distance", 0) / METERS_PER_MILE,
-        duration_s=summary.get("duration", 0),
-        steps=steps,
-        waypoints=props.get("way_points", []),
-    )
+    return RouteData(coords, props.get("summary", {}).get("duration", 0), steps, props.get("way_points", []))
 
 
 def remove_via_spur(route: RouteData) -> RouteData:
@@ -108,7 +100,7 @@ def remove_via_spur(route: RouteData) -> RouteData:
     coords, secs = splice(route.coords, cum_s, *spur)
     steps = [Step(i, i + 1, secs[i + 1] - secs[i]) for i in range(len(coords) - 1)]
     log.info("Removed %.1f mi via-point spur", cum_mi[spur[1]] - cum_mi[spur[0]])
-    return RouteData(coords, cumulative_miles(coords)[-1], secs[-1], steps)
+    return RouteData(coords, secs[-1], steps)
 
 
 def _footprint(route: RouteData, cell_deg: float = 0.02) -> set[tuple[int, int]]:

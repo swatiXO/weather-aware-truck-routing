@@ -134,13 +134,9 @@ def track(coords, cum_mi, cum_s, hos: bool, every_mi: float = 2.0) -> list[tuple
 
     out = []
     for mile in sorted(set(miles) | break_miles):
-        lat, lon = round_pt(point_at(coords, cum_mi, mile))
+        lat, lon = (round(v, 5) for v in point_at(coords, cum_mi, mile))
         wall = elapsed_s(drive_time_at(cum_mi, cum_s, mile), hos)
         out.append((lat, lon, round(wall)))
         if mile in break_miles:
             out.append((lat, lon, round(wall + HOS_BREAK_S)))
     return out
-
-
-def round_pt(p) -> tuple[float, float]:
-    return round(p[0], 5), round(p[1], 5)
