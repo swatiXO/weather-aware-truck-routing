@@ -1,15 +1,59 @@
 import { useEffect, useLayoutEffect, useState, type CSSProperties } from "react";
 
-export interface TourStep {
+interface TourStep {
   target: string; // CSS selector of the element to spotlight
   title: string;
   body: string;
 }
 
 interface Props {
-  steps: TourStep[];
   onClose: () => void;
 }
+
+const STEPS: TourStep[] = [
+  {
+    target: ".recommendation",
+    title: "The recommendation",
+    body: "Routes are ranked by the brief's rules: avoid No Travel, then fewest Severe and High miles, then lowest average risk, then travel time. The tags show the worst wind, rain and snow; the lines below say where and why.",
+  },
+  {
+    target: ".route-card",
+    title: "All three routes",
+    body: "The bar shows how many miles fall in each risk level. Click a card to show that route on the map; its checkpoint table is further down.",
+  },
+  {
+    target: ".map-wrap",
+    title: "The map",
+    body: "The selected route is coloured by risk. Each dot is a checkpoint, with weather taken at the truck's ETA there; click one for details. Hover a grey route or its label for its summary.",
+  },
+  {
+    target: ".hour-slider",
+    title: "Weather over the next 48 hours",
+    body: "The dots on the route are the weather the truck meets, each at the moment it gets there. The tiles are different: a snapshot of risk across the whole area at the slider's time. Press play to watch weather move; the white ring shows where the truck is.",
+  },
+  {
+    target: ".trip-summary",
+    title: "Try your own trip",
+    body: "Edit the trip to change places, departure or load. Compare 40,000 and 41,000 lb on a windy day: the load rules can push a checkpoint from High to Severe.",
+  },
+];
+
+// Remember that the tour was shown. Storage can be blocked (private mode), so failures are ignored.
+const TOUR_KEY = "truck-routing-tour-seen";
+export const tourSeen = () => {
+  try {
+    return localStorage.getItem(TOUR_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+export const markTourSeen = () => {
+  try {
+    localStorage.setItem(TOUR_KEY, "1");
+  } catch {
+    /* not important */
+  }
+};
 
 const CARD_W = 300;
 const GAP = 14;
@@ -40,11 +84,11 @@ function placeCard(t: Box): CSSProperties {
 }
 
 /** A small spotlight tour: dims the page, highlights one element, explains it in a sentence or two. */
-export function Tour({ steps, onClose }: Props) {
+export function Tour({ onClose }: Props) {
   const [index, setIndex] = useState(0);
   const [box, setBox] = useState<Box | null>(null);
-  const step = steps[index];
-  const last = index === steps.length - 1;
+  const step = STEPS[index];
+  const last = index === STEPS.length - 1;
 
   // Measure the target (scrolling it into view first) and keep the spotlight on it as the window changes.
   useLayoutEffect(() => {
@@ -85,7 +129,7 @@ export function Tour({ steps, onClose }: Props) {
       <div className="tour-spotlight" style={box} />
       <div className="tour-card" style={card}>
         <div className="tour-progress">
-          Step {index + 1} of {steps.length}
+          Step {index + 1} of {STEPS.length}
         </div>
         <h3 id="tour-title">{step.title}</h3>
         <p>{step.body}</p>

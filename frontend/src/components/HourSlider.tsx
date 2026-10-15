@@ -8,7 +8,8 @@ interface Props {
   hour: number;
   playing: boolean;
   disabled: boolean;
-  status?: string;
+  status?: string; // replaces the time label, e.g. while loading
+  note?: string; // appended to the time label, e.g. where the truck is
   marks: SliderMark[];
   onChange: (hour: number) => void;
   onTogglePlay: () => void;
@@ -17,7 +18,7 @@ interface Props {
 const STEP_MS = 300;
 const THUMB_PX = 16;
 
-export function HourSlider({ start, hour, playing, disabled, status, marks, onChange, onTogglePlay }: Props) {
+export function HourSlider({ start, hour, playing, disabled, status, note, marks, onChange, onTogglePlay }: Props) {
   useEffect(() => {
     if (!playing) return;
     // Loop back to the start so "play" can be left running during a demo.
@@ -28,6 +29,7 @@ export function HourSlider({ start, hour, playing, disabled, status, marks, onCh
   const at = new Date(start.getTime() + hour * 3600_000);
   // Match the thumb's travel range so marks line up with the hour they label.
   const position = (h: number) => `calc(${THUMB_PX / 2}px + (100% - ${THUMB_PX}px) * ${Math.min(Math.max(h / SLIDER_HOURS, 0), 1)})`;
+  const arrival = marks.find((m) => m.label === "Arrive");
 
   return (
     <div className="hour-slider">
@@ -46,6 +48,8 @@ export function HourSlider({ start, hour, playing, disabled, status, marks, onCh
           aria-label="Forecast hour"
         />
         <div className="marks" aria-hidden="true">
+          {/* The forecast runs a full 48h; shade the part after the truck has arrived. */}
+          {arrival && <span className="after-arrival" style={{ left: position(arrival.hour) }} />}
           {marks.map((m) => (
             <span key={`${m.kind}-${m.hour}`} className={`mark ${m.kind}`} style={{ left: position(m.hour) }}>
               <span className="mark-label">{m.label}</span>
@@ -57,7 +61,9 @@ export function HourSlider({ start, hour, playing, disabled, status, marks, onCh
         {status ?? (
           <>
             <strong>{formatTime(at)}</strong>
-            <span className="muted"> · departure +{hour}h</span>
+            <span className="muted">
+              {" "}· +{hour}h{note && ` · ${note}`}
+            </span>
           </>
         )}
       </div>

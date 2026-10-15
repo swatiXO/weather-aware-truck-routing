@@ -22,7 +22,7 @@ export function Legend({ showHeatmap, onToggleHeatmap }: Props) {
         <span className="legend-item"><span className="sym break" />30-min HOS break</span>
         <span className="legend-item"><span className="sym truck" />Truck at slider time</span>
         <label className="checkbox">
-          <input type="checkbox" checked={showHeatmap} onChange={(e) => onToggleHeatmap(e.target.checked)} /> Heatmap
+          <input type="checkbox" checked={showHeatmap} onChange={(e) => onToggleHeatmap(e.target.checked)} /> Heatmap (area risk at slider time)
         </label>
       </div>
     </div>

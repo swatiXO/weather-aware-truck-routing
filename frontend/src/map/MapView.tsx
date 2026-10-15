@@ -52,7 +52,7 @@ export function MapView({ plan, selectedId, onSelectRoute, heatmap, showHeatmap,
     [plan, paths],
   );
   const cells = useMemo(() => (heatmap ? heatCells(heatmap) : []), [heatmap]);
-  const tooltip = useMemo(() => makeTooltip(plan, selectedId), [plan, selectedId]);
+  const tooltip = useMemo(() => makeTooltip(plan, selectedId, heatmap, hour), [plan, selectedId, heatmap, hour]);
 
   useEffect(() => {
     if (plan) mapRef.current?.fitBounds(bounds([...paths.values()]), { padding: FIT_PADDING, duration: 900 });

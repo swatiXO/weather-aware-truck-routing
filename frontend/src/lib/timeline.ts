@@ -1,3 +1,5 @@
+import type { Route } from "../api/types";
+
 export const SLIDER_HOURS = 48;
 
 export interface SliderMark {
@@ -31,4 +33,19 @@ export function sliderMarks(start: Date, departure: string, arrival: string | nu
     marks.push(h <= SLIDER_HOURS ? { hour: h, label: "Arrive", kind: "arrive" } : { hour: SLIDER_HOURS, label: "Arrives later →", kind: "arrive" });
   }
   return marks;
+}
+
+/** Where the truck is at `at`, in words. Checkpoint ETAs already include HOS breaks. */
+export function truckStatus(route: Route, at: Date): string {
+  const t = at.getTime();
+  const cps = route.checkpoints;
+  const eta = (i: number) => Date.parse(cps[i].eta);
+  if (t < eta(0)) return "truck not yet departed";
+  if (t === eta(0)) return "truck at the start";
+  if (t >= eta(cps.length - 1)) return "truck has arrived";
+
+  const i = cps.findIndex((_, k) => eta(k) > t);
+  const mile = Math.round(cps[i - 1].mile + ((cps[i].mile - cps[i - 1].mile) * (t - eta(i - 1))) / (eta(i) - eta(i - 1)));
+  const onBreak = route.breaks.some((b) => t >= Date.parse(b.start) && t < Date.parse(b.end));
+  return onBreak ? `truck on a 30-min HOS break near mile ${mile}` : `truck en route, near mile ${mile}`;
 }

@@ -1,5 +1,5 @@
 import type { RiskName, Route, RouteSummary } from "../api/types";
-import { formatDuration, formatMiles, formatTime } from "../lib/format";
+import { formatDuration, formatTime } from "../lib/format";
 import { RISK_LABEL, RISK_ORDER, riskHex } from "../lib/risk";
 import { FactorChips } from "./FactorChips";
 
@@ -33,7 +33,7 @@ export function RouteCard({ route, selected, onSelect }: Props) {
 
       <div className="route-stats">
         <strong>{formatDuration(route.duration_h)}</strong>
-        <span>{formatMiles(route.distance_mi)}</span>
+        <span>{Math.round(route.distance_mi).toLocaleString()} mi</span>
         <span>Arrive {formatTime(route.arrival)}</span>
       </div>
 

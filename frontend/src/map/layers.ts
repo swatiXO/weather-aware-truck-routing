@@ -22,7 +22,7 @@ const LABEL_SLATE: RGBA = [34, 48, 68, 245];
 
 // Low-risk cells stay faint so the risky ones stand out.
 const HEAT_ALPHA: Record<RiskName, number> = { LOW: 55, MODERATE: 130, HIGH: 150, SEVERE: 170, NO_TRAVEL: 185 };
-const HEAT_COLORS = RISK_ORDER.map((r) => [...RISK_RGB[r], HEAT_ALPHA[r]] as RGBA);
+export const HEAT_COLORS = RISK_ORDER.map((r) => [...RISK_RGB[r], HEAT_ALPHA[r]] as RGBA);
 
 export interface HeatCell {
   index: number;
@@ -53,6 +53,7 @@ export function heatmapLayer(grid: HeatmapGrid, cells: HeatCell[], hour: number)
     getFillColor: (c) => HEAT_COLORS[grid.values[offset + c.index]] ?? HEAT_COLORS[0],
     updateTriggers: { getFillColor: hour },
     transitions: { getFillColor: 250 },
+    pickable: true, // hover shows the risk in that cell
   });
 }
 
@@ -189,7 +190,7 @@ function routeSummary(route: Route, selected: boolean): string {
 }
 
 /** Hover text for every pickable layer; route lines and labels show that route's summary. */
-export function makeTooltip(plan: Plan | null, selectedId: string | null) {
+export function makeTooltip(plan: Plan | null, selectedId: string | null, heatmap: HeatmapGrid | null, hour: number) {
   return ({ object, layer }: PickingInfo) => {
     if (!object || !layer || !plan) return null;
     const routeById = (id: string) => plan.routes.find((r) => r.id === id);
@@ -201,6 +202,12 @@ export function makeTooltip(plan: Plan | null, selectedId: string | null) {
       case "checkpoints": {
         const c = object as Checkpoint;
         return { text: `Mile ${Math.round(c.mile)} · ${RISK_LABEL[c.risk]}\n${formatShortTime(c.eta)} · ${describeConditions(c)}` };
+      }
+      case "weather-heatmap": {
+        if (!heatmap) return null;
+        const level = RISK_ORDER[heatmap.values[hour * heatmap.points.length + (object as HeatCell).index]] ?? "LOW";
+        const at = new Date(heatmap.start.getTime() + hour * 3600_000);
+        return { text: `Risk in this area at ${formatShortTime(at)}: ${RISK_LABEL[level]}` };
       }
       case "selected-route":
       case "alt-routes":

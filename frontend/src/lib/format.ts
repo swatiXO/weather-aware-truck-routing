@@ -11,8 +11,6 @@ export function formatDuration(hours: number): string {
   return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m} min`;
 }
 
-export const formatMiles = (mi: number) => `${Math.round(mi).toLocaleString()} mi`;
-
 /** Value for an <input type="datetime-local"> from a Date, in the browser's timezone. */
 export function toLocalInput(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");

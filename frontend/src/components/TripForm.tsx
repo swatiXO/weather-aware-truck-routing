@@ -35,14 +35,10 @@ export function TripForm({ loading, fieldErrors, onSubmit, runExample = 0 }: Pro
     onSubmit(request(origin, destination));
   };
 
-  const fillExample = () => {
-    setOrigin(EXAMPLE.origin);
-    setDestination(EXAMPLE.destination);
-  };
-
   useEffect(() => {
     if (!runExample) return;
-    fillExample();
+    setOrigin(EXAMPLE.origin);
+    setDestination(EXAMPLE.destination);
     onSubmit(request(EXAMPLE.origin, EXAMPLE.destination));
     // Only re-run when the intro panel asks again, not on every keystroke.
   }, [runExample]);
@@ -88,14 +84,9 @@ export function TripForm({ loading, fieldErrors, onSubmit, runExample = 0 }: Pro
           <input type="checkbox" checked={hos} onChange={(e) => setHos(e.target.checked)} /> HOS breaks
         </label>
       </div>
-      <div className="actions">
-        <button type="submit" className="primary" disabled={loading}>
-          {loading ? "Planning…" : "Plan routes"}
-        </button>
-        <button type="button" className="link" onClick={fillExample}>
-          Try Dallas → Denver
-        </button>
-      </div>
+      <button type="submit" className="primary" disabled={loading}>
+        {loading ? "Planning…" : "Plan routes"}
+      </button>
     </form>
   );
 }
