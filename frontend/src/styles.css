@@ -242,3 +242,43 @@ button.link { background: none; border: 0; color: var(--turquoise); cursor: poin
   .hour-slider { bottom: 12px; }
   .legend-row:last-child .legend-item:nth-child(4) { display: none; }
 }
+
+/* Intro panel (empty map) */
+.intro {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -55%); z-index: 2;
+  width: min(440px, calc(100% - 32px));
+  background: rgba(22, 33, 46, 0.97); border: 1px solid var(--border-strong); border-radius: 14px;
+  padding: 22px 22px 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.intro h2 { font-size: 19px; letter-spacing: -0.01em; }
+.intro p { font-size: 13px; line-height: 1.5; }
+.intro ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #cbd5e1; }
+.intro li::marker { color: var(--turquoise); font-weight: 700; }
+.intro strong { color: var(--text); }
+.intro .primary { align-self: flex-start; margin-top: 4px; }
+
+/* Guided tour */
+.guide {
+  margin-left: auto; background: var(--turquoise-soft); color: var(--turquoise); border: 0;
+  border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.tour { position: fixed; inset: 0; z-index: 50; }
+.tour-blocker { position: absolute; inset: 0; }
+.tour-spotlight {
+  position: fixed; border-radius: 12px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(5, 10, 16, 0.68), 0 0 0 2px var(--turquoise);
+  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+}
+.tour-card {
+  position: fixed; background: var(--panel-2); border: 1px solid rgba(64, 224, 208, 0.45); border-radius: 12px;
+  padding: 14px 16px; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55); display: flex; flex-direction: column; gap: 8px;
+  transition: top 0.25s ease, left 0.25s ease;
+}
+.tour-card h3 { margin: 0; font-size: 15px; }
+.tour-card p { font-size: 13px; line-height: 1.5; color: #cbd5e1; }
+.tour-progress { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--turquoise); }
+.tour-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.tour-actions .spacer { flex: 1; }
+.tour-actions .primary { padding: 7px 16px; }
+

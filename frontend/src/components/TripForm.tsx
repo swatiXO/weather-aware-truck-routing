@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { PlanRequest } from "../api/types";
 import { nextWholeHour, toLocalInput } from "../lib/format";
@@ -7,11 +7,13 @@ interface Props {
   loading: boolean;
   fieldErrors?: Record<string, string[]>;
   onSubmit: (req: PlanRequest) => void;
+  runExample?: number; // bump to fill in and plan the example trip (used by the intro panel)
 }
 
 const INTERVALS = [10, 25, 50] as const;
+const EXAMPLE = { origin: "Dallas, TX", destination: "Denver, CO" };
 
-export function TripForm({ loading, fieldErrors, onSubmit }: Props) {
+export function TripForm({ loading, fieldErrors, onSubmit, runExample = 0 }: Props) {
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [departure, setDeparture] = useState(() => toLocalInput(nextWholeHour()));
@@ -19,22 +21,31 @@ export function TripForm({ loading, fieldErrors, onSubmit }: Props) {
   const [interval, setIntervalMi] = useState<(typeof INTERVALS)[number]>(25);
   const [hos, setHos] = useState(true);
 
+  const request = (from: string, to: string): PlanRequest => ({
+    origin: from,
+    destination: to,
+    departure: new Date(departure).toISOString(),
+    load_lb: Number(load),
+    interval_mi: interval,
+    hos_breaks: hos,
+  });
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      origin,
-      destination,
-      departure: new Date(departure).toISOString(),
-      load_lb: Number(load),
-      interval_mi: interval,
-      hos_breaks: hos,
-    });
+    onSubmit(request(origin, destination));
   };
 
   const fillExample = () => {
-    setOrigin("Dallas, TX");
-    setDestination("Denver, CO");
+    setOrigin(EXAMPLE.origin);
+    setDestination(EXAMPLE.destination);
   };
+
+  useEffect(() => {
+    if (!runExample) return;
+    fillExample();
+    onSubmit(request(EXAMPLE.origin, EXAMPLE.destination));
+    // Only re-run when the intro panel asks again, not on every keystroke.
+  }, [runExample]);
 
   const err = (name: string) => fieldErrors?.[name]?.[0] && <span className="field-error">{fieldErrors[name][0]}</span>;
 
