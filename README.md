@@ -2,9 +2,11 @@
 
 A React + Django app that helps a truck driver pick the safest route. Enter an origin, destination, departure time and load weight. The app finds up to three truck routes, checks the forecast **at the time the truck will reach each checkpoint**, classifies risk with the assessment's wind/rain/snow and load rules, and recommends the best route. Everything is shown on a map with a 0–48 hour weather heatmap slider.
 
-- **Live app:** _add Vercel URL_
-- **API health:** _add Render URL_/api/health
-- **Walkthrough:** _add Loom URL_
+- **Live app:** https://weather-aware-truck-routing-beta.vercel.app
+- **API health:** https://truck-routing-api-9oh0.onrender.com/api/health
+- **Walkthrough:** _Loom link coming soon_
+
+> The API runs on Render's free tier, which sleeps when idle. The first request after a quiet period can take up to a minute while it wakes up; the app shows a notice while that happens.
 
 ## Features
 
