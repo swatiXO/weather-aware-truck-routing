@@ -57,7 +57,9 @@ def request_json(method: str, url: str, *, service: str, **kwargs):
 
 def _describe_error(service: str, status: int, body) -> str:
     if status == 429:
-        return f"{service} rate limit reached. Please wait a minute and try again."
+        # Open-Meteo says which limit (minutely / hourly / daily) was hit; pass that on.
+        reason = body.get("reason") if isinstance(body, dict) else None
+        return f"{service} rate limit reached{f' ({reason})' if reason else ''}. Please wait a minute and try again."
     if status in (401, 403):
         return f"{service} rejected the API key. Check the server configuration."
     # ORS sends {"error": {"message": ...}}; Open-Meteo sends {"error": true, "reason": ...}.
