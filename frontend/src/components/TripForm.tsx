@@ -53,7 +53,20 @@ export function TripForm({ loading, fieldErrors, onSubmit, runExample = 0 }: Pro
         {err("origin")}
       </div>
       <div className="field">
-        <label htmlFor="destination">Destination</label>
+        <div className="field-head">
+          <label htmlFor="destination">Destination</label>
+          <button
+            type="button"
+            className="link small"
+            onClick={() => {
+              setOrigin(destination);
+              setDestination(origin);
+            }}
+            title="Swap origin and destination"
+          >
+            ⇅ Swap
+          </button>
+        </div>
         <input id="destination" required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="City, state or lat, lon" />
         {err("destination")}
       </div>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Route } from "../api/types";
-import { sliderMarks, truckStatus } from "./timeline";
+import { riskBands, sliderMarks, truckStatus } from "./timeline";
 
 const at = (h: number) => new Date(Date.UTC(2026, 9, 16, h));
 const iso = (h: number) => at(h).toISOString();
@@ -37,5 +37,23 @@ describe("slider length", () => {
     const marks = sliderMarks(at(0), iso(0), iso(5), 5);
     expect(marks.at(-1)).toMatchObject({ hour: 5, label: "Arrive" });
     expect(marks.some((m) => m.kind === "day" && m.hour >= 5)).toBe(false);
+  });
+});
+
+describe("risk strip", () => {
+  it("places each stretch at the hours it is driven and merges equal neighbours", () => {
+    const r = {
+      checkpoints: [
+        { eta: iso(6), risk: "LOW" },
+        { eta: iso(8), risk: "LOW" },
+        { eta: iso(10), risk: "LOW" },
+        { eta: iso(12), risk: "SEVERE" },
+      ],
+    } as unknown as Route;
+    expect(riskBands(r, at(6), 48)).toEqual([
+      { from: 0, to: 4, risk: "LOW" },
+      { from: 4, to: 6, risk: "SEVERE" },
+    ]);
+    expect(riskBands(r, at(6), 5).at(-1)).toEqual({ from: 4, to: 5, risk: "SEVERE" }); // clipped to the slider
   });
 });

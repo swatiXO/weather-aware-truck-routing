@@ -1,14 +1,16 @@
 import type { Checkpoint } from "../api/types";
+import { RiskDot } from "../components/RiskDot";
 import { formatTime } from "../lib/format";
 import { RISK_LABEL, riskHex } from "../lib/risk";
+import { FACTORS } from "../lib/weather";
 
 export function CheckpointPopup({ cp }: { cp: Checkpoint }) {
   const w = cp.weather;
-  const rows = [
-    ["Wind", `${Math.round(w.wind_mph)} mph (gusts ${Math.round(w.gust_mph)})`, cp.levels.wind],
-    ["Rain", `${w.rain_in_hr.toFixed(2)} in/hr`, cp.levels.rain],
-    ["Snow", `${w.snow_in_hr.toFixed(2)} in/hr`, cp.levels.snow],
-  ] as const;
+  const reading = {
+    wind: `${Math.round(w.wind_mph)} mph (gusts ${Math.round(w.gust_mph)})`,
+    rain: `${w.rain_in_hr.toFixed(2)} in/hr`,
+    snow: `${w.snow_in_hr.toFixed(2)} in/hr`,
+  };
 
   return (
     <div className="cp-popup">
@@ -18,11 +20,14 @@ export function CheckpointPopup({ cp }: { cp: Checkpoint }) {
       <div className="muted">ETA {formatTime(cp.eta)}</div>
       <table>
         <tbody>
-          {rows.map(([label, value, level]) => (
-            <tr key={label}>
+          {FACTORS.map(([key, label]) => (
+            <tr key={key}>
               <td>{label}</td>
-              <td>{value}</td>
-              <td>{RISK_LABEL[level]}</td>
+              <td>{reading[key]}</td>
+              <td>
+                <RiskDot risk={cp.levels[key]} />
+                {RISK_LABEL[cp.levels[key]]}
+              </td>
             </tr>
           ))}
         </tbody>

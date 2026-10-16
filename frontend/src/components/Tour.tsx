@@ -1,42 +1,10 @@
 import { useEffect, useLayoutEffect, useState, type CSSProperties } from "react";
 
-interface TourStep {
-  target: string; // CSS selector of the element to spotlight
-  title: string;
-  body: string;
-}
+import { TOUR_STEPS as STEPS } from "./tourSteps";
 
 interface Props {
   onClose: () => void;
 }
-
-const STEPS: TourStep[] = [
-  {
-    target: ".recommendation",
-    title: "The recommendation",
-    body: "Routes are ranked by the brief's rules: avoid No Travel, then fewest Severe and High miles, then lowest average risk, then travel time. The tags show the worst wind, rain and snow; the lines below say where and why.",
-  },
-  {
-    target: ".route-card",
-    title: "All three routes",
-    body: "The bar shows how many miles fall in each risk level. Click a card to show that route on the map; its checkpoint table is further down.",
-  },
-  {
-    target: ".map-wrap",
-    title: "The map",
-    body: "The selected route is coloured by risk. Each dot is a checkpoint, with weather taken at the truck's ETA there; click one for details. Hover a grey route or its label for its summary.",
-  },
-  {
-    target: ".hour-slider",
-    title: "Weather over the trip",
-    body: "The dots on the route are the weather the truck meets, each at the moment it gets there. The tiles are different: a snapshot of risk across the whole area at the slider's time. Press play to watch weather move; the white ring shows where the truck is. Short trips can widen the view to the full 48 hours.",
-  },
-  {
-    target: ".trip-summary",
-    title: "Try your own trip",
-    body: "Edit the trip to change places, departure or load. Compare 40,000 and 41,000 lb on a windy day: the load rules can push a checkpoint from High to Severe.",
-  },
-];
 
 // Remember that the tour was shown. Storage can be blocked (private mode), so failures are ignored.
 const TOUR_KEY = "truck-routing-tour-seen";

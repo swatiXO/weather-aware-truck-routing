@@ -1,154 +1,68 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { api, ApiError } from "./api/client";
-import type { Checkpoint, Plan, PlanRequest } from "./api/types";
-import { CheckpointList } from "./components/CheckpointList";
+import { Header } from "./components/Header";
 import { HourSlider } from "./components/HourSlider";
 import { IntroPanel } from "./components/IntroPanel";
 import { Legend } from "./components/Legend";
+import { LoadingOverlay } from "./components/LoadingOverlay";
 import { RecommendationBanner } from "./components/RecommendationBanner";
-import { RouteCard } from "./components/RouteCard";
+import { RouteComparison } from "./components/RouteComparison";
+import { RouteDetails } from "./components/RouteDetails";
 import { markTourSeen, Tour, tourSeen } from "./components/Tour";
 import { TripForm } from "./components/TripForm";
 import { TripSummary } from "./components/TripSummary";
-import { BRIEF_WINDOW_HOURS, floorHour, hoursBetween, sliderMarks, truckStatus } from "./lib/timeline";
-import { useServerWake } from "./lib/useServerWake";
+import { usePlanner } from "./hooks/usePlanner";
+import { useServerWake } from "./hooks/useServerWake";
+import { useTimeline } from "./hooks/useTimeline";
 import { MapView } from "./map/MapView";
 
 export default function App() {
   const waking = useServerWake();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [hour, setHour] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const p = usePlanner();
+  const t = useTimeline(p.plan, p.selected, p.heatmap);
   const [showHeatmap, setShowHeatmap] = useState(true);
-  const [focused, setFocused] = useState<Checkpoint | null>(null);
-  const [editing, setEditing] = useState(true);
   const [touring, setTouring] = useState(false);
   const [runExample, setRunExample] = useState(0);
-  const [fullWindow, setFullWindow] = useState(false);
-  // Kept separately from the mutation so a failed re-plan (e.g. a typo) doesn't wipe the last good results.
-  const [plan, setPlan] = useState<Plan | null>(null);
-
-  const planMutation = useMutation({
-    mutationFn: (req: PlanRequest) => api.plan(req),
-    onSuccess: (plan) => {
-      setPlan(plan);
-      setSelectedId(plan.recommended_route_id ?? plan.routes[0]?.id ?? null);
-      setHour(0);
-      setPlaying(false);
-      setFocused(null);
-      setEditing(false);
-    },
-  });
-  const error = planMutation.error as ApiError | null;
 
   // First trip ever planned: start the tour once the results have rendered and the map has zoomed in.
   useEffect(() => {
-    if (!plan || tourSeen()) return;
+    if (!p.plan || tourSeen()) return;
     const timer = window.setTimeout(() => setTouring(true), 1000);
     return () => window.clearTimeout(timer);
-  }, [plan]);
-
-  const closeTour = () => {
-    markTourSeen();
-    setTouring(false);
-  };
-
-  // The heatmap is heavier, so it loads after the routes are already on screen.
-  const heatmap = useQuery({
-    queryKey: ["heatmap", plan?.plan_id],
-    queryFn: () => api.heatmap(plan!.plan_id),
-    enabled: !!plan,
-    staleTime: Infinity,
-    // A burst of trips can hit Open-Meteo's per-minute limit; waiting usually clears it.
-    retry: 2,
-    retryDelay: 20_000,
-  });
-
-  const selected = plan?.routes.find((r) => r.id === selectedId) ?? null;
-  const sliderStart = useMemo(() => heatmap.data?.start ?? (plan ? floorHour(plan.departure) : new Date()), [heatmap.data, plan]);
-
-  // The slider runs to the selected route's arrival. Short trips can expand it to the brief's
-  // 0-48h window; either way it can't go past the hours the heatmap actually has.
-  const tripHours = selected ? Math.max(1, Math.ceil(hoursBetween(sliderStart, new Date(selected.arrival)))) : BRIEF_WINDOW_HOURS;
-  const shortTrip = tripHours < BRIEF_WINDOW_HOURS;
-  const dataHours = heatmap.data ? heatmap.data.hours - 1 : BRIEF_WINDOW_HOURS;
-  const maxHour = Math.min(dataHours, shortTrip && fullWindow ? BRIEF_WINDOW_HOURS : tripHours);
-  const shownHour = Math.min(hour, maxHour); // switching to a shorter route mustn't leave the thumb off the end
-
-  const marks = useMemo(
-    () => (plan ? sliderMarks(sliderStart, plan.departure, selected?.arrival ?? null, maxHour) : []),
-    [plan, sliderStart, selected?.arrival, maxHour],
-  );
-  const sliderTime = new Date(sliderStart.getTime() + shownHour * 3600_000);
-  const truckSeconds = plan ? (sliderTime.getTime() - new Date(plan.departure).getTime()) / 1000 : null;
-  const showForm = editing || !plan;
-
-  let sliderStatus: string | undefined;
-  if (!plan) sliderStatus = "Plan a trip to see the forecast";
-  else if (heatmap.isLoading) sliderStatus = "Loading forecast grid…";
-  else if (heatmap.isError) sliderStatus = `Heatmap unavailable: ${heatmap.error.message}`;
+  }, [p.plan]);
 
   return (
     <div className="app">
       <aside className="sidebar">
-        <header>
-          <div className="brand">
-            <svg className="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="5" cy="18" r="2.5" />
-              <circle cx="19" cy="6" r="2.5" />
-              <path d="M7.5 18H14a3.5 3.5 0 0 0 0-7h-4a3.5 3.5 0 0 1 0-7h6.5" />
-            </svg>
-            <h1>Weather-Aware Truck Routing</h1>
-            {plan && (
-              <button className="guide" onClick={() => setTouring(true)} title="Show the guided tour again">
-                ? Guide
-              </button>
-            )}
-          </div>
-          <p className="muted small">Three truck routes, weather at each checkpoint's ETA, and the safest pick.</p>
-        </header>
-
+        <Header onGuide={p.plan ? () => setTouring(true) : undefined} />
         {waking && <div className="banner info">Waking the server (free hosting tier). This can take up to a minute…</div>}
 
         {/* Hidden rather than unmounted, so "Edit trip" brings back what was typed. */}
-        <div hidden={!showForm}>
-          <TripForm
-            loading={planMutation.isPending}
-            fieldErrors={error?.fields}
-            onSubmit={(req) => planMutation.mutate(req)}
-            runExample={runExample}
-          />
-          {plan && (
-            <button className="link cancel-edit" onClick={() => setEditing(false)}>
+        <div hidden={!p.editing}>
+          <TripForm loading={p.pending} fieldErrors={p.error?.fields} onSubmit={p.submit} runExample={runExample} />
+          {p.plan && (
+            <button className="link cancel-edit" onClick={() => p.setEditing(false)}>
               Back to results
             </button>
           )}
         </div>
-        {!showForm && plan && <TripSummary plan={plan} onEdit={() => setEditing(true)} />}
+        {!p.editing && p.plan && <TripSummary plan={p.plan} onEdit={() => p.setEditing(true)} />}
+        {p.error && <div className="banner error">{p.error.fields ? "Please fix the highlighted fields." : p.error.message}</div>}
 
-        {error && <div className="banner error">{error.fields ? "Please fix the highlighted fields." : error.message}</div>}
-
-        {plan && (
+        {p.plan && (
           <section className="results">
-            <RecommendationBanner plan={plan} onSelect={setSelectedId} />
-            {plan.notes
+            <RecommendationBanner plan={p.plan} onSelect={p.selectRoute} />
+            {p.plan.notes
               .filter((n) => !n.startsWith("No safe route")) // already said by the banner
               .map((n) => (
-                <div key={n} className="banner warn">{n}</div>
+                <div key={n} className="banner warn">
+                  {n}
+                </div>
               ))}
-            <h2 className="section-title">All routes</h2>
-            {plan.routes.map((r) => (
-              <RouteCard key={r.id} route={r} selected={r.id === selectedId} onSelect={() => setSelectedId(r.id)} />
-            ))}
-            {selected && (
-              <details className="cp-details" open>
-                <summary>
-                  Route {selected.id} checkpoints ({selected.checkpoints.length}, every {plan.interval_mi} mi)
-                </summary>
-                <CheckpointList checkpoints={selected.checkpoints} onFocus={setFocused} />
-              </details>
+            <h2 className="section-title">Compare routes</h2>
+            <RouteComparison routes={p.plan.routes} selectedId={p.selected?.id ?? null} onSelect={p.selectRoute} />
+            {p.selected && (
+              <RouteDetails route={p.selected} intervalMi={p.plan.interval_mi} highlight={p.highlight} onHighlight={p.setHighlight} onFocus={p.setFocused} />
             )}
           </section>
         )}
@@ -156,45 +70,45 @@ export default function App() {
 
       <main className="map-wrap">
         <MapView
-          plan={plan}
-          selectedId={selectedId}
-          onSelectRoute={setSelectedId}
-          heatmap={heatmap.data ?? null}
+          plan={p.plan}
+          selectedId={p.selected?.id ?? null}
+          onSelectRoute={p.selectRoute}
+          heatmap={p.heatmap.data ?? null}
           showHeatmap={showHeatmap}
-          hour={shownHour}
-          truckSeconds={truckSeconds}
-          focused={focused}
-          onFocus={setFocused}
+          hour={t.hour}
+          truckSeconds={t.truckSeconds}
+          focused={p.focused}
+          onFocus={p.setFocused}
+          highlight={p.highlight}
+          onHighlight={p.setHighlight}
         />
         <Legend showHeatmap={showHeatmap} onToggleHeatmap={setShowHeatmap} />
         <HourSlider
-          start={sliderStart}
-          hour={shownHour}
-          maxHour={maxHour}
-          playing={playing}
-          disabled={!heatmap.data}
-          status={sliderStatus}
-          note={selected ? truckStatus(selected, sliderTime) : undefined}
-          fullWindow={
-            plan && shortTrip
-              ? {
-                  on: fullWindow,
-                  onToggle: (on) => {
-                    setFullWindow(on);
-                    if (!on) setHour((h) => Math.min(h, tripHours));
-                  },
-                }
-              : undefined
-          }
-          marks={marks}
-          onChange={setHour}
-          onTogglePlay={() => setPlaying((p) => !p)}
+          start={t.start}
+          hour={t.hour}
+          maxHour={t.maxHour}
+          marks={t.marks}
+          bands={t.bands}
+          ready={t.ready}
+          status={t.status}
+          note={t.truckNote}
+          playing={t.playing}
+          fullWindow={t.fullWindow}
+          onChange={t.setHour}
+          onTogglePlay={t.togglePlay}
         />
-        {!plan && !planMutation.isPending && <IntroPanel onTryExample={() => setRunExample((n) => n + 1)} />}
-        {planMutation.isPending && <div className="map-loading">Fetching routes and forecasts…</div>}
+        {!p.plan && !p.pending && <IntroPanel onTryExample={() => setRunExample((n) => n + 1)} />}
+        {p.pending && <LoadingOverlay />}
       </main>
 
-      {touring && plan && <Tour onClose={closeTour} />}
+      {touring && p.plan && (
+        <Tour
+          onClose={() => {
+            markTourSeen();
+            setTouring(false);
+          }}
+        />
+      )}
     </div>
   );
 }

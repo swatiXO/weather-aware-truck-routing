@@ -4,6 +4,13 @@ import { RISK_LABEL, worse } from "./risk";
 
 const SIGNIFICANT_IN_HR = 0.01;
 
+/** The brief's three weather factors, in display order. */
+export const FACTORS = [
+  ["wind", "Wind"],
+  ["rain", "Rain"],
+  ["snow", "Snow"],
+] as const;
+
 export interface FactorPeaks {
   wind: RiskName;
   rain: RiskName;

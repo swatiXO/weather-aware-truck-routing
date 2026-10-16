@@ -1,12 +1,6 @@
 import type { Route } from "../api/types";
 import { RISK_LABEL, riskHex } from "../lib/risk";
-import { factorPeaks } from "../lib/weather";
-
-const FACTORS = [
-  ["wind", "Wind"],
-  ["rain", "Rain"],
-  ["snow", "Snow"],
-] as const;
+import { FACTORS, factorPeaks } from "../lib/weather";
 
 /** Wind / Rain / Snow chips coloured by each factor's worst level on the route. */
 export function FactorChips({ route }: { route: Route }) {

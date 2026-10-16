@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import type { HeatmapGrid, Plan } from "../api/types";
 import { RISK_LABEL, RISK_ORDER } from "../lib/risk";
-import { HEAT_COLORS, heatCells, heatmapLayer, makeTooltip, otherRoutes, type HeatCell } from "./layers";
+import { HEAT_COLORS, heatCells, heatmapLayer, otherRoutes, type HeatCell } from "./layers";
+import { makeTooltip } from "./tooltips";
 
 // 3 cells x 2 hours: hour 0 is calm, hour 1 has Moderate, Severe and No Travel cells.
 const grid: HeatmapGrid = {
