@@ -61,7 +61,9 @@ export default function App() {
     queryFn: () => api.heatmap(plan!.plan_id),
     enabled: !!plan,
     staleTime: Infinity,
-    retry: 1,
+    // A burst of trips can hit Open-Meteo's per-minute limit; waiting usually clears it.
+    retry: 2,
+    retryDelay: 20_000,
   });
 
   const selected = plan?.routes.find((r) => r.id === selectedId) ?? null;

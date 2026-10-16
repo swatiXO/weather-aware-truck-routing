@@ -156,7 +156,7 @@ These are the gaps in the spec and how we fill them. Each one goes in the README
 | A22 | Alternatives | ORS alternatives only work under 100 km. Long trips use via points, with out-and-back spurs removed (`domain/spur.py`) and every route checked for duplicates, including ORS's own alternatives. |
 | A23 | Display rounding | Readings are rounded to the displayed precision (whole mph, 0.01 in) before classification. Found in testing: 24.96 mph was shown as "25 mph" but classified Low. |
 | A24 | Slider length | Defaults to the trip's length; trips under 48 h get a "Show full 48h" toggle for the brief's window, and longer trips extend past it (up to 7 days). The heatmap data always covers max(48 h, trip). |
-| A25 | Adaptive heatmap grid | 0.5° cells by default; 0.75–1.5° when a corridor would exceed 350 cells. Found in testing: Seattle → Miami needed ~950 cells and hit Open-Meteo's 600/min limit. |
+| A25 | Adaptive heatmap grid | 0.5° cells by default; 0.75–1.5° when a corridor would exceed 250 cells. Found in testing: Seattle → Miami needed ~950 cells and hit Open-Meteo's 600/min limit. |
 
 ---
 

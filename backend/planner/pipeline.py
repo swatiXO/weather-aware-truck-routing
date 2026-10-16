@@ -26,9 +26,10 @@ from .services.weather import fetch_series
 # slowest route's arrival on longer trips, capped at a week.
 MIN_HEATMAP_HOURS = 49
 MAX_HEATMAP_HOURS = 7 * 24 + 1
-# Open-Meteo's free tier allows 600 locations a minute. Long trips switch to bigger
-# cells so a coast-to-coast heatmap (~950 cells at 0.5 deg) stays well under that.
-MAX_HEATMAP_CELLS = 350
+# Open-Meteo's free tier allows 600 locations a minute, shared with the checkpoint
+# lookups (~100-200 per plan). Long trips switch to bigger cells so a coast-to-coast
+# heatmap (~950 cells at 0.5 deg) leaves plenty of headroom.
+MAX_HEATMAP_CELLS = 250
 GRID_SIZES_DEG = (0.5, 0.75, 1.0, 1.5)
 FORECAST_HORIZON = timedelta(days=15)
 PLAN_TTL_S = 3600
