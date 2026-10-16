@@ -60,8 +60,14 @@ def _describe_error(service: str, status: int, body) -> str:
         return f"{service} rate limit reached. Please wait a minute and try again."
     if status in (401, 403):
         return f"{service} rejected the API key. Check the server configuration."
+    # ORS sends {"error": {"message": ...}}; Open-Meteo sends {"error": true, "reason": ...}.
     detail = ""
     if isinstance(body, dict):
         err = body.get("error")
-        detail = err.get("message", "") if isinstance(err, dict) else (err or body.get("reason", ""))
+        if isinstance(err, dict):
+            detail = err.get("message", "")
+        elif isinstance(err, str):
+            detail = err
+        else:
+            detail = body.get("reason", "")
     return f"{service} error: {detail}" if detail else f"{service} returned an error ({status})."

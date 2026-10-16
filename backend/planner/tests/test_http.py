@@ -44,3 +44,12 @@ def test_client_errors_are_not_retried(monkeypatch, status, message):
     with pytest.raises(UpstreamError, match=message):
         request_json("GET", "https://x", service="Weather")
     assert client.calls == 1
+
+
+@pytest.mark.parametrize("body, expected", [
+    ({"error": True, "reason": "Latitude must be in range of -90 to 90"}, "Weather error: Latitude must be in range of -90 to 90"),
+    ({"error": {"code": 2010, "message": "No routable point"}}, "Weather error: No routable point"),
+    ({}, "Weather returned an error (400)."),
+])
+def test_error_messages_use_the_providers_reason(body, expected):
+    assert http._describe_error("Weather", 400, body) == expected

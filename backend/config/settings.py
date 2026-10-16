@@ -59,7 +59,8 @@ TIME_ZONE = "UTC"
 ORS_API_KEY = os.environ.get("ORS_API_KEY", "")
 ORS_BASE_URL = "https://api.openrouteservice.org"
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
-HTTP_TIMEOUT_S = 20
+# Open-Meteo can take 10-20 s for a large batch at busy times; give it room before giving up.
+HTTP_TIMEOUT_S = 40
 
 LOGGING = {
     "version": 1,
