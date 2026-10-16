@@ -12,7 +12,7 @@ import { RouteCard } from "./components/RouteCard";
 import { markTourSeen, Tour, tourSeen } from "./components/Tour";
 import { TripForm } from "./components/TripForm";
 import { TripSummary } from "./components/TripSummary";
-import { floorHour, sliderMarks, truckStatus } from "./lib/timeline";
+import { BRIEF_WINDOW_HOURS, floorHour, hoursBetween, sliderMarks, truckStatus } from "./lib/timeline";
 import { useServerWake } from "./lib/useServerWake";
 import { MapView } from "./map/MapView";
 
@@ -26,6 +26,7 @@ export default function App() {
   const [editing, setEditing] = useState(true);
   const [touring, setTouring] = useState(false);
   const [runExample, setRunExample] = useState(0);
+  const [fullWindow, setFullWindow] = useState(false);
 
   const planMutation = useMutation({
     mutationFn: (req: PlanRequest) => api.plan(req),
@@ -63,13 +64,26 @@ export default function App() {
 
   const selected = plan?.routes.find((r) => r.id === selectedId) ?? null;
   const sliderStart = useMemo(() => heatmap.data?.start ?? (plan ? floorHour(plan.departure) : new Date()), [heatmap.data, plan]);
-  const marks = useMemo(() => (plan ? sliderMarks(sliderStart, plan.departure, selected?.arrival ?? null) : []), [plan, sliderStart, selected?.arrival]);
-  const truckSeconds = plan ? (sliderStart.getTime() + hour * 3600_000 - new Date(plan.departure).getTime()) / 1000 : null;
+
+  // The slider runs to the selected route's arrival. Short trips can expand it to the brief's
+  // 0-48h window; either way it can't go past the hours the heatmap actually has.
+  const tripHours = selected ? Math.max(1, Math.ceil(hoursBetween(sliderStart, new Date(selected.arrival)))) : BRIEF_WINDOW_HOURS;
+  const shortTrip = tripHours < BRIEF_WINDOW_HOURS;
+  const dataHours = heatmap.data ? heatmap.data.hours - 1 : BRIEF_WINDOW_HOURS;
+  const maxHour = Math.min(dataHours, shortTrip && fullWindow ? BRIEF_WINDOW_HOURS : tripHours);
+  const shownHour = Math.min(hour, maxHour); // switching to a shorter route mustn't leave the thumb off the end
+
+  const marks = useMemo(
+    () => (plan ? sliderMarks(sliderStart, plan.departure, selected?.arrival ?? null, maxHour) : []),
+    [plan, sliderStart, selected?.arrival, maxHour],
+  );
+  const sliderTime = new Date(sliderStart.getTime() + shownHour * 3600_000);
+  const truckSeconds = plan ? (sliderTime.getTime() - new Date(plan.departure).getTime()) / 1000 : null;
   const showForm = editing || !plan;
 
   let sliderStatus: string | undefined;
   if (!plan) sliderStatus = "Plan a trip to see the forecast";
-  else if (heatmap.isLoading) sliderStatus = "Loading 48-hour forecast grid…";
+  else if (heatmap.isLoading) sliderStatus = "Loading forecast grid…";
   else if (heatmap.isError) sliderStatus = `Heatmap unavailable: ${heatmap.error.message}`;
 
   return (
@@ -143,7 +157,7 @@ export default function App() {
           onSelectRoute={setSelectedId}
           heatmap={heatmap.data ?? null}
           showHeatmap={showHeatmap}
-          hour={hour}
+          hour={shownHour}
           truckSeconds={truckSeconds}
           focused={focused}
           onFocus={setFocused}
@@ -151,11 +165,23 @@ export default function App() {
         <Legend showHeatmap={showHeatmap} onToggleHeatmap={setShowHeatmap} />
         <HourSlider
           start={sliderStart}
-          hour={hour}
+          hour={shownHour}
+          maxHour={maxHour}
           playing={playing}
           disabled={!heatmap.data}
           status={sliderStatus}
-          note={selected ? truckStatus(selected, new Date(sliderStart.getTime() + hour * 3600_000)) : undefined}
+          note={selected ? truckStatus(selected, sliderTime) : undefined}
+          fullWindow={
+            plan && shortTrip
+              ? {
+                  on: fullWindow,
+                  onToggle: (on) => {
+                    setFullWindow(on);
+                    if (!on) setHour((h) => Math.min(h, tripHours));
+                  },
+                }
+              : undefined
+          }
           marks={marks}
           onChange={setHour}
           onTogglePlay={() => setPlaying((p) => !p)}

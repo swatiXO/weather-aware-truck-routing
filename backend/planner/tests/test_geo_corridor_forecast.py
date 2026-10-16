@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from planner.domain.corridor import corridor_points
-from planner.domain.forecast import HourlySeries
+from planner.domain.forecast import HourlySeries, Reading
+from planner.domain.risk import Risk, classify
 from planner.domain.geo import cumulative_miles, destination, haversine_mi, point_at
 
 
@@ -53,3 +54,11 @@ def test_forecast_clamps_outside_range():
 def test_forecast_handles_other_timezones():
     local = (START + timedelta(hours=1)).astimezone(timezone(timedelta(hours=-6)))
     assert series().at(local).wind_mph == pytest.approx(20)
+
+
+def test_readings_are_classified_as_displayed():
+    # 24.96 mph is displayed as "25 mph", so it must be Moderate, not Low.
+    r = Reading(24.96, 30.4, 0.098, 0.0).rounded()
+    assert (r.wind_mph, r.rain_in_hr) == (25, 0.10)
+    a = classify(r.wind_mph, r.rain_in_hr, r.snow_in_hr, 10_000)
+    assert a.wind == Risk.MODERATE and a.rain == Risk.MODERATE

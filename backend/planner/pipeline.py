@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 import polyline
 from django.core.cache import cache
 
-from .domain.corridor import DEFAULT_GRID_DEG, corridor_points
+from .domain.corridor import corridor_points
 from .domain.forecast import Reading
 from .domain.geo import cumulative_miles
 from .domain.recommend import RouteSummary, rank, summarize
@@ -22,7 +22,14 @@ from .services.http import UpstreamError
 from .services.routing import get_routes
 from .services.weather import fetch_series
 
-HEATMAP_HOURS = 49  # hour 0 .. hour 48
+# The heatmap covers at least hours 0..48 (the brief's window) and stretches to the
+# slowest route's arrival on longer trips, capped at a week.
+MIN_HEATMAP_HOURS = 49
+MAX_HEATMAP_HOURS = 7 * 24 + 1
+# Open-Meteo's free tier allows 600 locations a minute. Long trips switch to bigger
+# cells so a coast-to-coast heatmap (~950 cells at 0.5 deg) stays well under that.
+MAX_HEATMAP_CELLS = 350
+GRID_SIZES_DEG = (0.5, 0.75, 1.0, 1.5)
 FORECAST_HORIZON = timedelta(days=15)
 PLAN_TTL_S = 3600
 ROUTE_IDS = ("A", "B", "C")
@@ -61,7 +68,7 @@ def build_plan(origin_text: str, destination_text: str, departure: datetime, loa
 
     summaries, payloads = [], {}
     for route_id, (route, cps, breaks, cum_mi, cum_s) in zip(ROUTE_IDS, sampled):
-        readings = [series[_wx_key(c.lat, c.lon)].at(c.eta) for c in cps]
+        readings = [series[_wx_key(c.lat, c.lon)].at(c.eta).rounded() for c in cps]
         assessments = [classify(r.wind_mph, r.rain_in_hr, r.snow_in_hr, load_lb) for r in readings]
         wall_s = (cps[-1].eta - departure).total_seconds()
 
@@ -89,8 +96,9 @@ def build_plan(origin_text: str, destination_text: str, departure: datetime, loa
 
     # The heatmap is requested separately, so remember what it needs.
     plan_id = uuid.uuid4().hex[:12]
-    cache.set(f"plan:{plan_id}", {"routes": [_downsample(r.coords) for r in routes],
-                                  "departure": departure, "load_lb": load_lb}, PLAN_TTL_S)
+    heatmap_hours = min(max(MIN_HEATMAP_HOURS, hours - 1), MAX_HEATMAP_HOURS)
+    cache.set(f"plan:{plan_id}", {"routes": [_downsample(r.coords) for r in routes], "departure": departure,
+                                  "load_lb": load_lb, "hours": heatmap_hours}, PLAN_TTL_S)
 
     return {
         "plan_id": plan_id,
@@ -113,10 +121,10 @@ def _checkpoint_json(c: Checkpoint, r: Reading, a: Assessment) -> dict:
         "lon": round(c.lon, 5),
         "eta": _iso(c.eta),
         "weather": {
-            "wind_mph": round(r.wind_mph, 1),
-            "gust_mph": round(r.gust_mph, 1),
-            "rain_in_hr": round(r.rain_in_hr, 3),
-            "snow_in_hr": round(r.snow_in_hr, 3),
+            "wind_mph": r.wind_mph,
+            "gust_mph": r.gust_mph,
+            "rain_in_hr": r.rain_in_hr,
+            "snow_in_hr": r.snow_in_hr,
         },
         "levels": {"wind": a.wind.name, "rain": a.rain.name, "snow": a.snow.name},
         "risk": a.risk.name,
@@ -155,29 +163,36 @@ def _downsample(coords, every_mi: float = 0.5):
 
 
 def build_heatmap(plan_id: str) -> dict | None:
-    """Risk level for every corridor cell for hours 0..48 after departure, or None if the plan expired."""
+    """Risk level for every corridor cell, hour by hour from departure, or None if the plan expired."""
     if cached := cache.get(f"heatmap:{plan_id}"):
         return cached
     ctx = cache.get(f"plan:{plan_id}")
     if ctx is None:
         return None
 
-    points = corridor_points([(c, cumulative_miles(c)) for c in ctx["routes"]])
+    routes = [(c, cumulative_miles(c)) for c in ctx["routes"]]
+    for grid_deg in GRID_SIZES_DEG:
+        points = corridor_points(routes, grid_deg=grid_deg)
+        if len(points) <= MAX_HEATMAP_CELLS:
+            break
     start = floor_hour(ctx["departure"])
-    series = fetch_series(points, start, HEATMAP_HOURS)
+    hours = ctx["hours"]
+    series = fetch_series(points, start, hours)
 
-    # Row-major by hour, one byte per cell: compact enough to send all 49 hours at once.
+    # Row-major by hour, one byte per cell: compact enough to send every hour at once.
     n = len(points)
-    grid = bytearray(HEATMAP_HOURS * n)
+    grid = bytearray(hours * n)
     for j, p in enumerate(points):
         s = series[p]
-        for h in range(HEATMAP_HOURS):
-            grid[h * n + j] = classify_level(s.wind_mph[h] or 0, s.rain_in_hr[h] or 0, s.snow_in_hr[h] or 0, ctx["load_lb"])
+        for h in range(hours):
+            # Same rounding as checkpoints, so a tile and a checkpoint with the same weather agree.
+            r = Reading(s.wind_mph[h] or 0, 0, s.rain_in_hr[h] or 0, s.snow_in_hr[h] or 0).rounded()
+            grid[h * n + j] = classify_level(r.wind_mph, r.rain_in_hr, r.snow_in_hr, ctx["load_lb"])
 
     result = {
         "start": _iso(start),
-        "hours": HEATMAP_HOURS,
-        "cell_deg": DEFAULT_GRID_DEG,
+        "hours": hours,
+        "cell_deg": grid_deg,
         "points": [[lat, lon] for lat, lon in points],
         "risk": base64.b64encode(bytes(grid)).decode(),
     }

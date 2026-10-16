@@ -28,8 +28,8 @@ const STEPS: TourStep[] = [
   },
   {
     target: ".hour-slider",
-    title: "Weather over the next 48 hours",
-    body: "The dots on the route are the weather the truck meets, each at the moment it gets there. The tiles are different: a snapshot of risk across the whole area at the slider's time. Press play to watch weather move; the white ring shows where the truck is.",
+    title: "Weather over the trip",
+    body: "The dots on the route are the weather the truck meets, each at the moment it gets there. The tiles are different: a snapshot of risk across the whole area at the slider's time. Press play to watch weather move; the white ring shows where the truck is. Short trips can widen the view to the full 48 hours.",
   },
   {
     target: ".trip-summary",

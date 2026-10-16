@@ -65,7 +65,7 @@ No card-required services anywhere.
 ```
 React (Vercel)
   TripForm ─POST /api/plan──────────► routes + checkpoints + risk + recommendation (~2–4s)
-  MapView ◄─GET /api/heatmap/{id}──── 49-hour risk grid for the corridor (loaded after routes)
+  MapView ◄─GET /api/heatmap/{id}──── hourly risk grid for the corridor, max(48h, trip) (loaded after routes)
 
 Django (Render)
   views.py            thin: validate → call services/domain → serialize
@@ -152,6 +152,9 @@ These are the gaps in the spec and how we fill them. Each one goes in the README
 | A20 | Truck ETAs | Keep ORS HGV durations as-is (≈41 mph average, conservative). Considered scaling to car time × 1.15 and rejected it, because it would be a made-up calibration. Documented as a known limitation. |
 | A21 | Ranking order | Strict spec order, even when a tiny average-risk difference beats hours of travel time. The rank reason shows the time trade-off so the driver can see it. |
 | A22 | Alternatives | ORS alternatives only work under 100 km. Long trips use via points, with out-and-back spurs removed (`domain/spur.py`) and every route checked for duplicates, including ORS's own alternatives. |
+| A23 | Display rounding | Readings are rounded to the displayed precision (whole mph, 0.01 in) before classification. Found in testing: 24.96 mph was shown as "25 mph" but classified Low. |
+| A24 | Slider length | Defaults to the trip's length; trips under 48 h get a "Show full 48h" toggle for the brief's window, and longer trips extend past it (up to 7 days). The heatmap data always covers max(48 h, trip). |
+| A25 | Adaptive heatmap grid | 0.5° cells by default; 0.75–1.5° when a corridor would exceed 350 cells. Found in testing: Seattle → Miami needed ~950 cells and hit Open-Meteo's 600/min limit. |
 
 ---
 
@@ -172,7 +175,7 @@ These are the gaps in the spec and how we fill them. Each one goes in the README
 - Weather is fetched in **batches** of about 100 coordinates per Open-Meteo call, with chunks running in parallel.
 - Cache key `(lat 2dp, lon 2dp, hour)`. Geocoding and routing are cached by their inputs.
 - The heatmap loads separately so routes appear first.
-- The heatmap is sent once with all 49 hours. **Moving the slider makes zero network requests**: it only changes `hour`, which feeds deck.gl `updateTriggers`. Target: 60 fps.
+- The heatmap is sent once with every hour of the trip (at least 48). **Moving the slider makes zero network requests**: it only changes `hour`, which feeds deck.gl `updateTriggers`. Target: 60 fps.
 - Corridor points are deduplicated on a 0.5° grid (about 150–250 points per trip; see A18).
 - The heatmap is drawn as colored grid tiles (deck.gl `SolidPolygonLayer`) that fade over 250 ms between hours. The original plan was `HeatmapLayer` with MEAN aggregation, but it hid low-risk areas and produced blocky artifacts.
 

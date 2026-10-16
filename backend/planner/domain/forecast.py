@@ -10,6 +10,14 @@ class Reading:
     rain_in_hr: float
     snow_in_hr: float
 
+    def rounded(self) -> "Reading":
+        """Round to the precision the UI shows (whole mph, hundredths of an inch).
+
+        Classifying the rounded values keeps the display honest: 24.96 mph is shown
+        as "25 mph", so it must also count as 25 mph (Moderate), not 24.96 (Low).
+        """
+        return Reading(round(self.wind_mph), round(self.gust_mph), round(self.rain_in_hr, 2), round(self.snow_in_hr, 2))
+
 
 @dataclass(frozen=True)
 class HourlySeries:

@@ -8,6 +8,7 @@ import { HEAT_COLORS, heatCells, heatmapLayer, makeTooltip, type HeatCell } from
 // 3 cells x 2 hours: hour 0 is calm, hour 1 has Moderate, Severe and No Travel cells.
 const grid: HeatmapGrid = {
   start: new Date("2026-10-16T12:00:00Z"),
+  hours: 2,
   cellDeg: 0.5,
   points: [[35, -100], [35, -99.5], [35, -99]],
   values: new Uint8Array([0, 0, 0, 1, 3, 4]),

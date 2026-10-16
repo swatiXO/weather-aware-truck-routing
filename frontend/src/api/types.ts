@@ -80,6 +80,7 @@ export interface HeatmapResponse {
 /** The heatmap after decoding: risk level of point i at hour h is values[h * points.length + i]. */
 export interface HeatmapGrid {
   start: Date;
+  hours: number;
   cellDeg: number;
   points: [number, number][]; // (lat, lon) cell centres
   values: Uint8Array;

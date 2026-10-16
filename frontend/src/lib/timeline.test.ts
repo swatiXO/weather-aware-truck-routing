@@ -25,8 +25,17 @@ describe("truck status", () => {
 });
 
 describe("slider marks", () => {
-  it("pins a late arrival to the end of the 48h window", () => {
-    const marks = sliderMarks(at(0), iso(0), iso(60));
-    expect(marks.at(-1)).toMatchObject({ hour: 48, label: "Arrives later →" });
+  it("pins an arrival beyond the slider to its end", () => {
+    const marks = sliderMarks(at(0), iso(0), iso(60), 48);
+    expect(marks.at(-1)).toMatchObject({ hour: 48, kind: "arrive" });
+    expect(marks.at(-1)?.label).toMatch(/^Arrives .+ →$/);
+  });
+});
+
+describe("slider length", () => {
+  it("puts the arrival at the end of a trip-length slider", () => {
+    const marks = sliderMarks(at(0), iso(0), iso(5), 5);
+    expect(marks.at(-1)).toMatchObject({ hour: 5, label: "Arrive" });
+    expect(marks.some((m) => m.kind === "day" && m.hour >= 5)).toBe(false);
   });
 });

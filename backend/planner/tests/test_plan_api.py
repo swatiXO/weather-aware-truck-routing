@@ -112,3 +112,28 @@ def test_plan_requests_are_rate_limited_per_client(mocked):
     assert codes[:6] == [200] * 6
     assert codes[6] == 429
     assert "throttled" in client.post("/api/plan", request_body(), format="json").json()["detail"]
+
+
+def test_heatmap_stretches_to_cover_long_trips(mocked, monkeypatch):
+    # One 70-hour route: the heatmap should run to arrival, not stop at hour 48.
+    long_route = RouteData(line(-100.0), 70 * 3600, [Step(0, 100, 70 * 3600)])
+    monkeypatch.setattr("planner.pipeline.get_routes", lambda o, d, load: ([long_route], []))
+    client = APIClient()
+    plan = client.post("/api/plan", request_body(hos_breaks=False), format="json").json()
+    data = client.get(f"/api/heatmap/{plan['plan_id']}").json()
+    assert 71 <= data["hours"] <= 73
+    assert len(base64.b64decode(data["risk"])) == data["hours"] * len(data["points"])
+
+
+def test_heatmap_uses_bigger_cells_when_the_corridor_is_large(mocked, monkeypatch):
+    client = APIClient()
+    plan = client.post("/api/plan", request_body(), format="json").json()
+    normal = client.get(f"/api/heatmap/{plan['plan_id']}").json()
+
+    cache.delete(f"heatmap:{plan['plan_id']}")
+    monkeypatch.setattr("planner.pipeline.MAX_HEATMAP_CELLS", len(normal["points"]) - 1)
+    coarse = client.get(f"/api/heatmap/{plan['plan_id']}").json()
+
+    assert normal["cell_deg"] == 0.5
+    assert coarse["cell_deg"] > 0.5
+    assert len(coarse["points"]) < len(normal["points"])

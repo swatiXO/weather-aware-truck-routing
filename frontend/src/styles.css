@@ -211,6 +211,7 @@ button.link { background: none; border: 0; color: var(--turquoise); cursor: poin
 .mark.depart .mark-label { color: var(--turquoise); font-weight: 700; transform: none; }
 .mark.arrive::before { background: var(--coral); width: 3px; }
 .mark.arrive .mark-label { color: #fda4af; font-weight: 700; }
+.mark.at-end .mark-label { transform: translateX(-100%); } /* keep end labels inside the track */
 .hour-label { font-size: 13px; grid-column: 2; }
 
 .map-loading {
@@ -286,3 +287,4 @@ button.link { background: none; border: 0; color: var(--turquoise); cursor: poin
   position: absolute; top: 2px; right: 8px; height: 14px; border-radius: 0 4px 4px 0;
   background: repeating-linear-gradient(135deg, rgba(148, 163, 184, 0.18) 0 4px, transparent 4px 8px);
 }
+.full-window { padding: 0; margin-left: 12px; font-size: 12px; color: var(--muted); }

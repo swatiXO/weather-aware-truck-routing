@@ -28,7 +28,7 @@ function decodeHeatmap(h: HeatmapResponse): HeatmapGrid {
   const bin = atob(h.risk);
   const values = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) values[i] = bin.charCodeAt(i);
-  return { start: new Date(h.start), cellDeg: h.cell_deg, points: h.points, values };
+  return { start: new Date(h.start), hours: h.hours, cellDeg: h.cell_deg, points: h.points, values };
 }
 
 export const api = {

@@ -16,7 +16,7 @@ export function IntroPanel({ onTryExample }: Props) {
           <strong>Compare three routes</strong> by wind, rain and snow risk along the way.
         </li>
         <li>
-          <strong>Scrub the forecast</strong> up to 48 hours ahead and watch the truck move through it.
+          <strong>Scrub the forecast</strong> for the whole trip and watch the truck move through it.
         </li>
       </ol>
       <button className="primary" onClick={onTryExample}>
