@@ -14,9 +14,9 @@ A React + Django app that helps a truck driver pick the safest route. Enter an o
 - **Checkpoints every 10, 25 or 50 miles** (you choose), each with its own ETA based on per-step travel times from the router.
 - **Time-aware weather.** Each checkpoint uses the forecast for its ETA, interpolated between the two surrounding forecast hours.
 - **Risk classification** using the brief's thresholds plus the load-weight rules, with a per-factor breakdown (wind, rain, snow) and a "load-adjusted" flag.
-- **Recommendation** in the brief's priority order, with a one-line explanation of why each route ranks where it does.
-- **Map:** all three routes are colored by risk segment. The selected one is drawn bold with every checkpoint; the others are thinner and show dots only where they reach Moderate risk or worse. Hover any route for its summary, click a checkpoint for its weather at the ETA, or click another route to select it.
-- **Weather heatmap** over the trip corridor with a time slider and play button. The slider runs from departure to arrival; trips under 48 hours can expand it to the full 0–48h window. Every hour loads in one request, so dragging the slider never hits the network.
+- **Recommendation** in the brief's priority order, with a one-line explanation of why each route ranks where it does, plus a side-by-side **route comparison** (time, distance, risky miles, worst wind/rain/snow) with the best value in each row highlighted.
+- **Map:** all three routes are colored by risk segment. The selected one is drawn bold with every checkpoint; the others are thinner and show dots only where they reach Moderate risk or worse. Hover any route for its summary, click a checkpoint for its weather at the ETA, or click another route to select it. Hovering a checkpoint row highlights it on the map and vice versa; zoom and "Fit routes" buttons sit top-right.
+- **Weather heatmap** over the trip corridor with a time slider and play button (or Space). A coloured strip above the slider shows when the truck meets each risk level. The slider runs from departure to arrival; trips under 48 hours can expand it to the full 0–48h window. Every hour loads in one request, so dragging the slider never hits the network.
 - **Truck marker** that follows the slider along the selected route.
 - **HOS breaks (optional, on by default):** a 30-minute break after every 8 hours of driving, included in all ETAs.
 - **First-visit intro and a 5-step guided tour** (replayable from the Guide button).
@@ -83,8 +83,9 @@ backend/
     tests/                pytest: domain unit tests, routing fallback, full API flow with mocked HTTP
 frontend/
   src/api/                Typed API client mirroring the backend contract (decodes the heatmap)
-  src/components/         Sidebar UI: form, recommendation, route cards, checkpoint table, slider, legend
-  src/map/                MapLibre map, deck.gl layers, checkpoint popup
+  src/hooks/              usePlanner (request, plan, selection, heatmap) and useTimeline (slider range, playback, labels)
+  src/components/         Sidebar UI: form, recommendation, route comparison, route details, checkpoint table, slider, legend, tour
+  src/map/                MapLibre map, deck.gl layers, tooltips, checkpoint popup
   src/lib/                Pure helpers: geometry, weather summaries, slider timeline, formatting, risk palette
 ```
 
