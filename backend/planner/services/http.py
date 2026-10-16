@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import time
 
 import httpx
 from django.conf import settings
@@ -20,7 +21,8 @@ class UpstreamError(Exception):
         self.status = status
 
 
-_client = httpx.Client(timeout=settings.HTTP_TIMEOUT_S, headers={"User-Agent": "spotter-truck-routing/1.0"})
+_client = httpx.Client(timeout=settings.HTTP_TIMEOUT_S, headers={"User-Agent": "weather-aware-truck-routing/1.0"})
+RETRY_DELAY_S = 0.5
 
 
 def cache_key(prefix: str, payload) -> str:
@@ -29,11 +31,20 @@ def cache_key(prefix: str, payload) -> str:
 
 
 def request_json(method: str, url: str, *, service: str, **kwargs):
-    try:
-        resp = _client.request(method, url, **kwargs)
-    except httpx.HTTPError as exc:
-        log.warning("%s request failed: %s", service, exc)
-        raise UpstreamError(f"{service} is unreachable right now. Please try again.") from exc
+    # One retry for network blips and 5xx; 4xx (bad input, rate limits) won't fix themselves.
+    for attempt in (1, 2):
+        try:
+            resp = _client.request(method, url, **kwargs)
+        except httpx.HTTPError as exc:
+            log.warning("%s request failed (attempt %d): %s", service, attempt, exc)
+            if attempt == 2:
+                raise UpstreamError(f"{service} is unreachable right now. Please try again.") from exc
+        else:
+            if resp.status_code < 500 or attempt == 2:
+                break
+            log.warning("%s returned %s (attempt %d)", service, resp.status_code, attempt)
+        time.sleep(RETRY_DELAY_S)
+
     if resp.status_code >= 400:
         log.warning("%s returned %s: %s", service, resp.status_code, resp.text[:500])
         try:

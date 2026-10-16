@@ -15,8 +15,7 @@ class PlanRequestSerializer(serializers.Serializer):
     hos_breaks = serializers.BooleanField(default=True)
 
     def validate_departure(self, value: datetime) -> datetime:
-        if value.tzinfo is None:
-            raise serializers.ValidationError("Include a timezone offset, e.g. 2026-10-16T06:00:00-05:00.")
+        # DRF has already made this timezone-aware; a time sent without an offset is read as UTC.
         now = datetime.now(timezone.utc)
         if value < now - DEPARTURE_GRACE:
             raise serializers.ValidationError("Departure can't be in the past.")

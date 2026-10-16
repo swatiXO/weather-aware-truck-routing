@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
 import { api, ApiError } from "./api/client";
-import type { Checkpoint, PlanRequest } from "./api/types";
+import type { Checkpoint, Plan, PlanRequest } from "./api/types";
 import { CheckpointList } from "./components/CheckpointList";
 import { HourSlider } from "./components/HourSlider";
 import { IntroPanel } from "./components/IntroPanel";
@@ -27,10 +27,13 @@ export default function App() {
   const [touring, setTouring] = useState(false);
   const [runExample, setRunExample] = useState(0);
   const [fullWindow, setFullWindow] = useState(false);
+  // Kept separately from the mutation so a failed re-plan (e.g. a typo) doesn't wipe the last good results.
+  const [plan, setPlan] = useState<Plan | null>(null);
 
   const planMutation = useMutation({
     mutationFn: (req: PlanRequest) => api.plan(req),
     onSuccess: (plan) => {
+      setPlan(plan);
       setSelectedId(plan.recommended_route_id ?? plan.routes[0]?.id ?? null);
       setHour(0);
       setPlaying(false);
@@ -38,7 +41,6 @@ export default function App() {
       setEditing(false);
     },
   });
-  const plan = planMutation.data ?? null;
   const error = planMutation.error as ApiError | null;
 
   // First trip ever planned: start the tour once the results have rendered and the map has zoomed in.
