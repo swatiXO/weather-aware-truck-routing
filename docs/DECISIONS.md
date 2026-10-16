@@ -1,14 +1,14 @@
 # Weather-Aware Truck Routing — Delivery Decisions
 
-Spotter AI Full Stack assessment · Budget: 16 hours over 4 days · Status: **Agreed scope**
+Spotter AI Full Stack assessment · Budget: 16 hours over 4 days · Status: **Delivered**
 
-This document fixes what we deliver, how we build it, and the assumptions we make where the spec leaves gaps. The README will draw its "Assumptions" and "Architecture" sections from here.
+This document records what was delivered, how it was built, and the assumptions made where the spec leaves gaps. It was written up front and updated as testing changed things; rows marked **Happened** in §12 are risks that came true.
 
 ---
 
 ## 1. Goal
 
-A React + Django web app where a truck driver enters origin, destination, departure time and load weight. The app returns **3 routes**, checks the weather **at the time the truck will reach each checkpoint**, classifies risk using the provided rules, **recommends the safest route** (balanced against travel time), and shows everything on a map with a **0–48h weather heatmap slider**.
+A React + Django web app where a truck driver enters origin, destination, departure time and load weight. The app returns **3 routes**, checks the weather **at the time the truck will reach each checkpoint**, classifies risk using the provided rules, **recommends the safest route** (balanced against travel time), and shows everything on a map with a **weather heatmap and time slider** (see A24 for how it relates to the brief's 0–48h window).
 
 Guiding rule from the brief: *correctness and clarity over extra features.*
 
@@ -34,6 +34,8 @@ Guiding rule from the brief: *correctness and clarity over extra features.*
 |---|---|---|
 | X1 | **Truck marker on slider**: shows where the truck is on the selected route at slider hour *h* | Connects the heatmap to the trip. Very visual, about 1h of work. |
 | X2 | **HOS rest breaks in ETAs**: 30-min break after every 8h of cumulative driving | Makes ETAs, and so the weather lookups, realistic for truckers. Toggle in the form, **on by default**. |
+| X3 | **First-visit intro + 5-step guided tour** | Added after review: a cold visitor saw an empty map with no explanation. |
+| X4 | **Per-IP rate limits, caching, one retry on upstream blips** | Added after review: protects the shared free-tier API quotas while the app is being evaluated. |
 
 ### Explicitly out of scope (listed in the README as "next steps")
 - Full HOS model (11h driving limit / 14h window / 10h off-duty reset)
@@ -47,7 +49,7 @@ Guiding rule from the brief: *correctness and clarity over extra features.*
 
 | Layer | Choice |
 |---|---|
-| Frontend | React 18 + **TypeScript** + Vite, TanStack Query |
+| Frontend | React 19 + **TypeScript** + Vite, TanStack Query |
 | Map | MapLibre GL (via `react-map-gl`) + deck.gl overlay; OpenFreeMap tiles (no key) |
 | Backend | Django 5 + Django REST Framework, `httpx`, `polyline` |
 | Routing + geocoding | **OpenRouteService** (`driving-hgv` profile, free key, no card) |
@@ -98,12 +100,12 @@ Response (abridged):
   "plan_id": "…",
   "origin": {"label": "…", "lat": 0, "lon": 0},
   "destination": {"label": "…", "lat": 0, "lon": 0},
-  "recommended_route_id": "r2",
+  "recommended_route_id": "B",
   "routes": [{
-    "id": "r1", "geometry": "<polyline>", "distance_mi": 0, "duration_h": 0, "arrival": "…",
+    "id": "A", "geometry": "<polyline>", "distance_mi": 0, "duration_h": 0, "arrival": "…",
     "summary": {"no_travel_mi": 0, "severe_mi": 0, "high_mi": 0, "moderate_mi": 0, "low_mi": 0,
                 "avg_risk": 0.0, "max_risk": "HIGH"},
-    "rank": 1, "rank_reason": "Fewest severe miles; 40 min slower than r3",
+    "rank": 1, "rank_reason": "Fewest severe miles; 40 min slower than C",
     "breaks": [{"mile": 0, "start": "…", "end": "…"}],
     "checkpoints": [{
       "mile": 25, "lat": 0, "lon": 0, "eta": "…",
@@ -235,10 +237,9 @@ After each milestone: run the test suite, exercise the app end-to-end against th
 
 ---
 
-## 14. Final deliverables checklist
+## 14. Deliverables
 
-- [ ] Public GitHub repo with README (setup, architecture, assumptions §6, decisions, next steps)
-- [ ] Hosted frontend URL + backend health URL
-- [ ] Tests passing in CI
-- [ ] 5–10 min Loom: demo, then why the recommended route won, then a live load change (29k → 41k lb), then the heatmap slider, then a code tour of `risk.py` and its tests, then assumptions and next steps
-- [ ] Links submitted to Teamtailor before the 4-day deadline
+- [x] Public GitHub repo with README (setup, architecture, assumptions, decisions, next steps)
+- [x] Hosted frontend and backend
+- [x] Tests passing in CI
+- [ ] 5–10 min Loom walkthrough

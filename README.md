@@ -1,6 +1,6 @@
 # Weather-Aware Truck Routing
 
-A React + Django app that helps a truck driver pick the safest route. Enter an origin, destination, departure time and load weight. The app finds up to three truck routes, checks the forecast **at the time the truck will reach each checkpoint**, classifies risk with the assessment's wind/rain/snow and load rules, and recommends the best route. Everything is shown on a map with a 0–48 hour weather heatmap slider.
+A React + Django app that helps a truck driver pick the safest route. Enter an origin, destination, departure time and load weight. The app finds up to three truck routes, checks the forecast **at the time the truck will reach each checkpoint**, classifies risk with the assessment's wind/rain/snow and load rules, and recommends the best route. Everything is shown on a map, with a weather heatmap you can scrub through time.
 
 - **Live app:** https://weather-aware-truck-routing-beta.vercel.app
 - **API health:** https://truck-routing-api-9oh0.onrender.com/api/health
@@ -19,6 +19,14 @@ A React + Django app that helps a truck driver pick the safest route. Enter an o
 - **Weather heatmap** over the trip corridor with a time slider and play button. The slider runs from departure to arrival; trips under 48 hours can expand it to the full 0–48h window. Every hour loads in one request, so dragging the slider never hits the network.
 - **Truck marker** that follows the slider along the selected route.
 - **HOS breaks (optional, on by default):** a 30-minute break after every 8 hours of driving, included in all ETAs.
+- **First-visit intro and a 5-step guided tour** (replayable from the Guide button).
+
+## Error handling and reliability
+
+- Clear messages for unknown places, identical origin and destination, places with no road between them, departures in the past or beyond the forecast, and trips that would end after the forecast runs out.
+- A failed re-plan (e.g. a typo while editing) keeps the previous results on screen.
+- Per-IP rate limits on the API, so one client can't exhaust the shared OpenRouteService / Open-Meteo quotas.
+- Upstream calls are cached and retried once on network errors or 5xx responses; rate limits and bad requests fail fast with a readable message.
 
 ## How the logic works
 
@@ -59,7 +67,7 @@ The brief leaves some gaps. These are the choices made, and the full reasoning i
    **Known limitation:** ORS's truck profile uses European-style truck speed caps and averages about 41 mph on US interstates (Dallas → Denver is about 19h of driving, versus about 14–15h for a real truck). Its `maximum_speed` option can't raise this. These ETAs are kept as-is and treated as conservative rather than adjusted with a made-up factor.
 6. Departure must be within 14 days, and the trip must end within the forecast horizon.
 7. **Slider length:** the brief asks for a 0–48h slider. The slider defaults to the trip's length (departure to arrival) and short trips have a "Show full 48h" toggle, so the brief's window is one click away; trips over 48 hours extend past it, up to 7 days. Checkpoints always use the forecast for their own ETA.
-8. **Heatmap grid:** 0.5° cells (~30 mi) across a corridor ~100 mi wide, switching to 0.75–1.5° cells when a corridor would need more than 350 cells (a coast-to-coast trip needs ~950 at 0.5°). Open-Meteo's free tier counts every location as one call (600/min, 5,000/h), so a finer grid would hit the limit. The heatmap uses the same classifier and load as the checkpoints, so the two always agree.
+8. **Heatmap grid:** 0.5° cells (~30 mi) across a corridor ~100 mi wide, switching to 0.75–1.5° cells when a corridor would need more than 350 cells (a coast-to-coast trip needs ~950 at 0.5°). Open-Meteo's free tier counts every location as one call (600/min, 5,000/h), so a finer grid would hit the limit. The heatmap uses the same classifier, load and rounding as the checkpoints. Remaining differences come from position (a tile is forecast at its centre, up to ~20 mi from the road) and whole-hour timing; in a Dallas → Denver check, 91% of checkpoints matched their tile exactly.
 9. The public ORS API only computes alternative routes for trips under 100 km. For longer trips (or when ORS returns near-duplicates), the app routes through via points offset to each side of the main route's midpoint. It cuts out the dead-end detour a via point can create on a side road, and keeps only routes that overlap existing ones by less than 85%.
 
 ## Project layout
@@ -110,9 +118,11 @@ cp .env.example .env
 npm run dev                   # http://localhost:5173
 ```
 
-**Tests:**
+**Tests** (from the repo root):
 ```bash
 cd backend && pytest
+```
+```bash
 cd frontend && npm test && npm run typecheck
 ```
 
