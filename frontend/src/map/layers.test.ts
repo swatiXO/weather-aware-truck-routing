@@ -24,7 +24,7 @@ describe("heatmap layer", () => {
       const level = grid.values[hour * cells.length + i];
       expect(fillAt(hour)(cell)).toEqual(HEAT_COLORS[level]);
       const info = { object: cell, layer: { id: "weather-heatmap" } as Layer } as PickingInfo;
-      expect(tooltip(info)?.text).toMatch(new RegExp(`: ${RISK_LABEL[RISK_ORDER[level]]}$`));
+      expect(tooltip(info)?.text).toMatch(new RegExp(`: ${RISK_LABEL[RISK_ORDER[level]]}$`, "m"));
     });
   });
 });

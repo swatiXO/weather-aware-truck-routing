@@ -240,7 +240,8 @@ export function makeTooltip(plan: Plan | null, selectedId: string | null, heatma
         if (!heatmap) return null;
         const level = RISK_ORDER[heatmap.values[hour * heatmap.points.length + (object as HeatCell).index]] ?? "LOW";
         const at = new Date(heatmap.start.getTime() + hour * 3600_000);
-        return { text: `Risk in this area at ${formatShortTime(at)}: ${RISK_LABEL[level]}` };
+        // One forecast point per ~30 mi tile, so say where it was taken.
+        return { text: `Risk at this tile's centre at ${formatShortTime(at)}: ${RISK_LABEL[level]}\nCheckpoints show the exact weather on the road` };
       }
       case "selected-route":
       case "alt-routes":
