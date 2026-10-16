@@ -15,7 +15,7 @@ A React + Django app that helps a truck driver pick the safest route. Enter an o
 - **Time-aware weather.** Each checkpoint uses the forecast for its ETA, interpolated between the two surrounding forecast hours.
 - **Risk classification** using the brief's thresholds plus the load-weight rules, with a per-factor breakdown (wind, rain, snow) and a "load-adjusted" flag.
 - **Recommendation** in the brief's priority order, with a one-line explanation of why each route ranks where it does.
-- **Map:** the selected route is colored by risk segment. Click a checkpoint for details, or click a grey route to select it.
+- **Map:** all three routes are colored by risk segment. The selected one is drawn bold with every checkpoint; the others are thinner and show dots only where they reach Moderate risk or worse. Hover any route for its summary, click a checkpoint for its weather at the ETA, or click another route to select it.
 - **Weather heatmap** over the trip corridor with a time slider and play button. The slider runs from departure to arrival; trips under 48 hours can expand it to the full 0–48h window. Every hour loads in one request, so dragging the slider never hits the network.
 - **Truck marker** that follows the slider along the selected route.
 - **HOS breaks (optional, on by default):** a 30-minute break after every 8 hours of driving, included in all ETAs.

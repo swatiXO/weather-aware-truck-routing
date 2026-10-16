@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { HeatmapGrid, Plan } from "../api/types";
 import { RISK_LABEL, RISK_ORDER } from "../lib/risk";
-import { HEAT_COLORS, heatCells, heatmapLayer, makeTooltip, type HeatCell } from "./layers";
+import { HEAT_COLORS, heatCells, heatmapLayer, makeTooltip, otherRoutes, type HeatCell } from "./layers";
 
 // 3 cells x 2 hours: hour 0 is calm, hour 1 has Moderate, Severe and No Travel cells.
 const grid: HeatmapGrid = {
@@ -26,5 +26,20 @@ describe("heatmap layer", () => {
       const info = { object: cell, layer: { id: "weather-heatmap" } as Layer } as PickingInfo;
       expect(tooltip(info)?.text).toMatch(new RegExp(`: ${RISK_LABEL[RISK_ORDER[level]]}$`));
     });
+  });
+});
+
+describe("other routes on the map", () => {
+  it("risk-colours unselected routes and only marks their risky checkpoints", () => {
+    const cp = (mile: number, risk: string, lat: number) => ({ mile, risk, lat, lon: -100 });
+    const routes = [
+      { id: "A", checkpoints: [cp(0, "LOW", 30), cp(69, "LOW", 31)] },
+      { id: "B", checkpoints: [cp(0, "LOW", 30), cp(69, "SEVERE", 31)] },
+    ];
+    const paths = new Map(routes.map((r) => [r.id, [[-100, 30], [-100, 31]] as [number, number][]]));
+    const others = otherRoutes({ routes } as unknown as Plan, "A", paths);
+
+    expect(others.segments.map((s) => [s.id, s.risk])).toEqual([["B", "SEVERE"]]);
+    expect(others.checkpoints.map((c) => [c.routeId, c.mile])).toEqual([["B", 69]]);
   });
 });

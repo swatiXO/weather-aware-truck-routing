@@ -10,7 +10,7 @@ import type { Checkpoint, HeatmapGrid, Plan } from "../api/types";
 import { formatDuration } from "../lib/format";
 import { bounds, decodePath, pointAlong, riskSegments } from "../lib/geo";
 import { CheckpointPopup } from "./CheckpointPopup";
-import { heatCells, heatmapLayer, makeTooltip, routeLayers } from "./layers";
+import { heatCells, heatmapLayer, makeTooltip, otherRoutes, routeLayers } from "./layers";
 
 interface Props {
   plan: Plan | null;
@@ -51,6 +51,7 @@ export function MapView({ plan, selectedId, onSelectRoute, heatmap, showHeatmap,
       })),
     [plan, paths],
   );
+  const others = useMemo(() => (plan && selectedId ? otherRoutes(plan, selectedId, paths) : null), [plan, selectedId, paths]);
   const cells = useMemo(() => (heatmap ? heatCells(heatmap) : []), [heatmap]);
   const tooltip = useMemo(() => makeTooltip(plan, selectedId, heatmap, hour), [plan, selectedId, heatmap, hour]);
 
@@ -65,8 +66,8 @@ export function MapView({ plan, selectedId, onSelectRoute, heatmap, showHeatmap,
 
   const layers: Layer[] = [];
   if (heatmap && showHeatmap) layers.push(heatmapLayer(heatmap, cells, hour));
-  if (plan && selected) {
-    layers.push(...routeLayers({ plan, selected, paths, segments, labels, truckSeconds, onSelectRoute, onFocus }));
+  if (plan && selected && others) {
+    layers.push(...routeLayers({ plan, selected, segments, others, labels, truckSeconds, onSelectRoute, onFocus }));
   }
 
   return (

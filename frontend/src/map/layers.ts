@@ -4,7 +4,7 @@ import { PathLayer, ScatterplotLayer, SolidPolygonLayer, TextLayer } from "@deck
 
 import type { Break, Checkpoint, HeatmapGrid, Plan, RiskName, Route } from "../api/types";
 import { formatDuration, formatShortTime, formatTime } from "../lib/format";
-import { positionAt, type LonLat, type RiskSegment } from "../lib/geo";
+import { positionAt, riskSegments, type LonLat, type RiskSegment } from "../lib/geo";
 import { RISK_LABEL, RISK_ORDER, RISK_RGB } from "../lib/risk";
 import { describeConditions, factorPeaks } from "../lib/weather";
 
@@ -16,7 +16,8 @@ const TURQUOISE: RGBA = [64, 224, 208, 255];
 const CORAL: RGBA = [248, 73, 96, 255];
 const WHITE: RGBA = [255, 255, 255, 255];
 const NAVY: RGBA = [10, 18, 28, 235];
-const ALT_ROUTE: RGBA = [148, 163, 184, 190];
+const SLATE_BORDER: RGBA = [148, 163, 184, 190];
+const ALT_ALPHA = 150; // unselected routes: risk-coloured but quieter than the selected one
 const BREAK_BLUE: RGBA = [96, 165, 250, 255];
 const LABEL_SLATE: RGBA = [34, 48, 68, 245];
 
@@ -57,11 +58,27 @@ export function heatmapLayer(grid: HeatmapGrid, cells: HeatCell[], hour: number)
   });
 }
 
+export type AltSegment = RiskSegment & { id: string };
+export type AltCheckpoint = Checkpoint & { routeId: string };
+
+/**
+ * The unselected routes, risk-coloured so all three can be compared at a glance. Only their
+ * risky checkpoints get dots; the line colour already says "Low" everywhere else.
+ * Built once per plan/selection (not per slider tick), since splitting paths is the slow part.
+ */
+export function otherRoutes(plan: Plan, selectedId: string, paths: Map<string, LonLat[]>) {
+  const others = plan.routes.filter((r) => r.id !== selectedId);
+  return {
+    segments: others.flatMap((r) => riskSegments(paths.get(r.id) ?? [], r.checkpoints).map((s): AltSegment => ({ ...s, id: r.id }))),
+    checkpoints: others.flatMap((r) => r.checkpoints.filter((c) => c.risk !== "LOW").map((c): AltCheckpoint => ({ ...c, routeId: r.id }))),
+  };
+}
+
 interface RouteLayerInput {
   plan: Plan;
   selected: Route;
-  paths: Map<string, LonLat[]>;
   segments: RiskSegment[];
+  others: ReturnType<typeof otherRoutes>;
   labels: RouteLabel[];
   truckSeconds: number | null;
   onSelectRoute: (id: string) => void;
@@ -71,20 +88,33 @@ interface RouteLayerInput {
 const pixels = { radiusUnits: "pixels", stroked: true } as const;
 const roundedPath = { widthUnits: "pixels", capRounded: true, jointRounded: true } as const;
 
-export function routeLayers({ plan, selected, paths, segments, labels, truckSeconds, onSelectRoute, onFocus }: RouteLayerInput): Layer[] {
-  const alternatives = plan.routes.filter((r) => r.id !== selected.id).map((r) => ({ id: r.id, path: paths.get(r.id) ?? [] }));
+export function routeLayers({ plan, selected, segments, others, labels, truckSeconds, onSelectRoute, onFocus }: RouteLayerInput): Layer[] {
   const isSelected = (d: RouteLabel) => d.id === selected.id;
 
   const layers: Layer[] = [
-    new PathLayer<{ id: string; path: LonLat[] }>({
+    // Thin dark casing so the quieter routes still stand out against green heatmap tiles.
+    new PathLayer<AltSegment>({ id: "alt-outline", data: others.segments, getPath: (d) => d.path, getColor: NAVY, getWidth: 6, ...roundedPath }),
+    new PathLayer<AltSegment>({
       id: "alt-routes",
-      data: alternatives,
+      data: others.segments,
       getPath: (d) => d.path,
-      getColor: ALT_ROUTE,
-      getWidth: 5,
-      widthUnits: "pixels",
+      getColor: (d) => [...RISK_RGB[d.risk], ALT_ALPHA],
+      getWidth: 3,
+      ...roundedPath,
       pickable: true,
       onClick: ({ object }) => object && onSelectRoute(object.id),
+    }),
+    new ScatterplotLayer<AltCheckpoint>({
+      id: "alt-checkpoints",
+      data: others.checkpoints,
+      getPosition: (c) => [c.lon, c.lat],
+      getFillColor: (c) => RISK_RGB[c.risk],
+      getLineColor: NAVY,
+      getRadius: 4,
+      lineWidthMinPixels: 1,
+      pickable: true,
+      onClick: ({ object }) => object && onSelectRoute(object.routeId),
+      ...pixels,
     }),
     // A dark outline under the risk-coloured route keeps it readable over the heatmap.
     new PathLayer<RiskSegment>({ id: "selected-outline", data: segments, getPath: (d) => d.path, getColor: NAVY, getWidth: 10, ...roundedPath }),
@@ -146,7 +176,7 @@ export function routeLayers({ plan, selected, paths, segments, labels, truckSeco
       background: true,
       backgroundPadding: [7, 4],
       getBackgroundColor: (d) => (isSelected(d) ? TEAL : LABEL_SLATE),
-      getBorderColor: (d) => (isSelected(d) ? TURQUOISE : ALT_ROUTE),
+      getBorderColor: (d) => (isSelected(d) ? TURQUOISE : SLATE_BORDER),
       getBorderWidth: 1,
       pickable: true,
       onClick: ({ object }) => object && onSelectRoute(object.id),
@@ -199,9 +229,12 @@ export function makeTooltip(plan: Plan | null, selectedId: string | null, heatma
         const b = object as Break;
         return { text: `30-min HOS break · mile ${Math.round(b.mile)}\n${formatShortTime(b.start)} – ${formatShortTime(b.end)}` };
       }
-      case "checkpoints": {
-        const c = object as Checkpoint;
-        return { text: `Mile ${Math.round(c.mile)} · ${RISK_LABEL[c.risk]}\n${formatShortTime(c.eta)} · ${describeConditions(c)}` };
+      case "checkpoints":
+      case "alt-checkpoints": {
+        const c = object as Checkpoint & { routeId?: string };
+        const route = c.routeId ? `Route ${c.routeId} · ` : "";
+        const hint = c.routeId ? "\nClick to select this route" : "";
+        return { text: `${route}Mile ${Math.round(c.mile)} · ${RISK_LABEL[c.risk]}\n${formatShortTime(c.eta)} · ${describeConditions(c)}${hint}` };
       }
       case "weather-heatmap": {
         if (!heatmap) return null;
